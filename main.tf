@@ -140,3 +140,23 @@ resource "aws_lb_listener" "listener" {
 output "loadbalancername" {
   value = aws_lb.mylb.dns_name
 }
+
+
+# How to import existing resources with state file
+# import {
+#   id = ""
+#   to = aws_instance.example
+# }
+
+# command - tarraform plan -generate-config-out=generated-reseource.tf
+# command - terraform import aws_instance.example (instance_id)
+
+
+# How to host statefile in S3 using remote backend
+# terraform {
+#   backend "s3" {
+#     bucket = "mybucket"
+#     key    = "path to create in s3"
+#     region = "us-east-1"
+#   }
+# }
