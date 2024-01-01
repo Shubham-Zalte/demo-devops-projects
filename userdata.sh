@@ -27,9 +27,9 @@ cat <<EOF > /var/www/html/index.html
   </style>
 </head>
 <body>
-  <h1>Terraform Project Server 1</h1>
+  <h1>Terraform Project Demo by Shubham</h1>
   <h2>Instance ID: <span style="color:green">$INSTANCE_ID</span></h2>
-  <p>Welcome to My AWS Terraform Project</p>
+  <p>Welcome to Terraform : Part 1</p>
   
 </body>
 </html>
