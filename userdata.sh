@@ -2,8 +2,6 @@
 apt update
 apt install -y apache2
 
-#Adding a comment for git practice
-
 # Get the instance ID using the instance metadata
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
