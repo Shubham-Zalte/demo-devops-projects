@@ -8,6 +8,10 @@ INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 # Install the AWS CLI
 apt install -y awscli
 
+
+
+apt install -y awscliapt install -y awscliapt install -y awscliapt install -y awscli
+
 # Create a simple HTML file with the portfolio content and display the images
 cat <<EOF > /var/www/html/index.html
 <!DOCTYPE html>
