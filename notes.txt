@@ -1,0 +1,148 @@
+# VPC --> 
+resource "aws_vpc" "my_vpc" {
+  cidr_block = var.cidr
+}
+
+# subnets --> 
+resource "aws_subnet" "sub1" {
+  vpc_id     = aws_vpc.my_vpc.id
+  cidr_block = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "Sub1"
+  }
+}
+
+resource "aws_subnet" "sub2" {
+  vpc_id     = aws_vpc.my_vpc.id
+  cidr_block = "10.0.2.0/24"
+  availability_zone = "us-east-1b"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "Sub2"
+  }
+}
+
+# --> igw (Gateway for Public subent (as well as resources inside it. Both inbound and outbound traffic) to communicate to external world 
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.my_vpc
+
+  tags = {
+    Name = "my_vpc"
+  }
+}
+
+# --> route table (Contains set of rules called as routes which defines where traffic should be routed within VPC) -->
+# IP for internet : Resources inside public subnet need some address where it can send traffic.
+resource "aws_route_table" "RT" {
+  vpc_id = aws_vpc.my_vpc.id
+  route = {
+    cidr_block = "0.0.0.0/0"
+    gateway_id =  aws_internet_gateway.igw.id
+  }
+}
+
+# --> Route table association with subnets
+resource "aws_route_table_association" "RTA1" {
+  subnet_id = aws_subnet.sub1.id
+  route_table_id = aws_route_table.RT
+}
+
+resource "aws_route_table_association" "RTA2" {
+  subnet_id = aws_subnet.sub2.id
+  route_table_id = aws_route_table.RT
+}
+
+# --> Create Security Group --> Defines rules for which traffic to allow
+resource "aws_security_group" "websg" {
+  name        = "allow_tls"
+  description = "Allow TLS inbound traffic and all outbound traffic"
+  vpc_id      = aws_vpc.my_vpc.id
+
+  ingress {
+    description = "Allow HTTP traffic"
+    to_port = 80
+    from_port = 80
+    protocol = "tcp"
+    cidr_blocks = [ "0.0.0.0/0" ]
+  }
+
+  ingress {
+    description = "Allow SSH traffic"
+    to_port = 22 # Allowing traffic on applications hosted with ports from 221 to 223 from all IP addressess within range defined "cidr_blocks"
+    from_port = 22
+    protocol = "tcp"
+    cidr_blocks = [ "0.0.0.0/0" ]
+  }
+
+  egress {
+    description = "Allow all traffic"
+    to_port = 0
+    from_port = 0
+    protocol = "-1"
+    cidr_blocks = [ "0.0.0.0/0" ]
+  }
+
+  tags = {
+    Name = "allow_tls"
+  }
+}
+
+
+# Creating EC2 instances now in 2 availability zones
+resource "aws_instance" "server1" {
+  ami = var.ami_ids
+  instance_type = var.instance_type
+  availability_zone = "us-east-1a"
+  subnet_id = aws_subnet.sub1.id
+  vpc_security_group_ids = [ aws_security_group.websg ]
+  user_data = base64decode(file("userdata1.sh"))
+}
+
+resource "aws_instance" "server2" {
+  ami = var.ami_ids
+  instance_type = var.instance_type
+  availability_zone = "us-east-1b"
+  subnet_id = aws_subnet.sub2.id
+  vpc_security_group_ids = [ aws_security_group.websg ]
+  user_data = base64decode(file("userdata2.sh"))
+}
+
+# Creating Load Balancer for both instances
+resource "aws_lb" "my_lb" {
+  name               = "my_vpc_lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.websg]
+  subnets            = [aws_subnet.sub1, aws_subnet.sub2]
+
+  tags = {
+    Environment = "Web"
+  }
+}
+
+# Creating target group for LB --> specifies on where to send traffic.
+# --> on which port traffic needs to be sent.
+# --> the load balancer will forward incoming requests to the targets on port 80.
+# --> If multiple services with different ports (can run with same port but different IPs), then need to create different target group.
+# --> NodePort service - exposes services with static port on each node. This static port is used to forward traffic to the service. it's allocated on all worker nodes. The master node is primarily responsible for managing the overall state of the cluster.
+# --> So create a target group per instance that will send traffic on Node Static Port from there using services resources request will be routed to specific service/pod (labels and selectors traffic will be routed to required services running with different port)
+resource "aws_lb_target_group" "mytg" {
+  name     = "tg-for-demo"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.my_vpc.id
+
+  health_check {
+    path = "/"
+    port = "traffic-port"
+  }
+}
+
+resource "aws_target" "name" {
+  
+}
